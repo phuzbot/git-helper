@@ -49,6 +49,10 @@ magenta = '\x1b[0;35m'
 reset = '\x1b[00m'
 red = '\x1b[0;31m'
 
+def isClean():
+  status=getCommandOutput('git status --long')
+  ss = re.sub(r'On branch ([^\n])+\nnothing to commit, working tree clean\n', 'abcd', status)
+  return ss == 'abcd'
 
 def getLog():
   commitSeparator = '~*~**~**~**~'
@@ -94,6 +98,11 @@ def main():
       lastCommit = sys.argv[4].rstrip('\n')
     moveCommits(rebaseCommit, firstCommit, lastCommit)
 
+  if action == '--isClean':
+    if isClean():
+      print('status is clean')
+    else:
+      print('status is not clean')
 
 
   # Features to add

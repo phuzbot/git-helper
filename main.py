@@ -29,6 +29,11 @@ def get_direct_parent(commit):
     return get_command_output('git rev-parse ' + commit + '^').rstrip('\n')
 
 
+def cherry_pick_list(commits):
+    for commit in commits:
+        get_command_output('git cherry-pick ' + commit)
+
+
 def move_commits(root_commit, commits_to_move_down, end_move_commit):
     commits_to_move_up = get_commits_between(
         commits_to_move_down, end_move_commit)
@@ -36,8 +41,7 @@ def move_commits(root_commit, commits_to_move_down, end_move_commit):
     commits_to_remain = get_commits_between(end_move_commit, 'HEAD')
     get_command_output('git reset ' + root_commit + ' --hard')
     ordered_commits = commits_to_move_up + commitsToMoveDown + commits_to_remain
-    for cherry_pick_commit in ordered_commits:
-        get_command_output('git cherry-pick ' + cherry_pick_commit)
+    cherry_pick_list(ordered_commits)
     # should check the diff here and then error out if it does not match
 
 
@@ -47,16 +51,14 @@ def squash_commit(start_squash, end_squash):
     get_command_output('git reset --soft ' + start_squash)
     get_command_output('git commit --amend --no-edit')
     ordered_commits = get_commits_between(end_squash, prev_head)
-    for cherry_pick_commit in ordered_commits:
-        get_command_output('git cherry-pick ' + cherry_pick_commit)
+    cherry_pick_list(ordered_commits)
 
 
 def delete_commit(commit_to_delete):
     prev_head = get_command_output('git rev-parse HEAD').rstrip('\n')
     get_command_output('git reset ' + commit_to_delete + '^ --hard')
     ordered_commits = get_commits_between(commit_to_delete, prev_head)
-    for cherry_pick_commit in ordered_commits:
-        get_command_output('git cherry-pick ' + cherry_pick_commit)
+    cherry_pick_list(ordered_commits)
 
 
 green = '\x1b[0;32m'

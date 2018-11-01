@@ -8,55 +8,55 @@ import re
 import subprocess
 
 
-def getCommandOutput(command):
-    buildProcess = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE,
-                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-    buildCommandOutput = buildProcess.stdout.read()
-    buildProcess.wait()
-    return buildCommandOutput
+def get_command_output(command):
+    process = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+    process_output = process.stdout.read()
+    process.wait()
+    return process_output
 
 
-def getCommitsBetween(earlier, later):
+def get_commits_between(earlier, later):
     # excludes earlier commit, includes later commit
-    unparsedCommitList = getCommandOutput(
+    raw_commit_list = get_command_output(
         'git rev-list --ancestry-path ' + earlier + '..' + later)
-    commitList = unparsedCommitList.rstrip('\n').split('\n')
-    commitList.reverse()
-    print(commitList)
-    return commitList
+    commit_list = raw_commit_list.rstrip('\n').split('\n')
+    commit_list.reverse()
+    return commit_list
 
 
-def getDirectParent(commit):
-    return getCommandOutput('git rev-parse ' + commit + '^').rstrip('\n')
+def get_direct_parent(commit):
+    return get_command_output('git rev-parse ' + commit + '^').rstrip('\n')
 
 
-def moveCommits(commitToFollow, startCommitToMove, endCommitToMove):
-    commitsToMoveUp = getCommitsBetween(startCommitToMove, endCommitToMove)
-    commitsToMoveDown = getCommitsBetween(commitToFollow, startCommitToMove)
-    commitsToRemain = getCommitsBetween(endCommitToMove, 'HEAD')
-    getCommandOutput('git reset ' + commitToFollow + ' --hard')
-    orderedCommits = commitsToMoveUp + commitsToMoveDown + commitsToRemain
-    for cherryPickCommit in orderedCommits:
-        getCommandOutput('git cherry-pick ' + cherryPickCommit)
+def move_commits(root_commit, commits_to_move_down, end_move_commit):
+    commits_to_move_up = get_commits_between(
+        commits_to_move_down, end_move_commit)
+    commitsToMoveDown = get_commits_between(root_commit, commits_to_move_down)
+    commits_to_remain = get_commits_between(end_move_commit, 'HEAD')
+    get_command_output('git reset ' + root_commit + ' --hard')
+    ordered_commits = commits_to_move_up + commitsToMoveDown + commits_to_remain
+    for cherry_pick_commit in ordered_commits:
+        get_command_output('git cherry-pick ' + cherry_pick_commit)
     # should check the diff here and then error out if it does not match
 
 
-def squashCommit(startSquash, endSquash):
-    oldHead = getCommandOutput('git rev-parse HEAD').rstrip('\n')
-    getCommandOutput('git reset ' + endSquash + ' --hard')
-    getCommandOutput('git reset --soft ' + startSquash)
-    getCommandOutput('git commit --amend --no-edit')
-    orderedCommits = getCommitsBetween(endSquash, oldHead)
-    for cherryPickCommit in orderedCommits:
-        getCommandOutput('git cherry-pick ' + cherryPickCommit)
+def squash_commit(start_squash, end_squash):
+    prev_head = get_command_output('git rev-parse HEAD').rstrip('\n')
+    get_command_output('git reset ' + end_squash + ' --hard')
+    get_command_output('git reset --soft ' + start_squash)
+    get_command_output('git commit --amend --no-edit')
+    ordered_commits = get_commits_between(end_squash, prev_head)
+    for cherry_pick_commit in ordered_commits:
+        get_command_output('git cherry-pick ' + cherry_pick_commit)
 
 
-def deleteCommit(commitToDelete):
-    oldHead = getCommandOutput('git rev-parse HEAD').rstrip('\n')
-    getCommandOutput('git reset ' + commitToDelete + '^ --hard')
-    orderedCommits = getCommitsBetween(commitToDelete, oldHead)
-    for cherryPickCommit in orderedCommits:
-        getCommandOutput('git cherry-pick ' + cherryPickCommit)
+def delete_commit(commit_to_delete):
+    prev_head = get_command_output('git rev-parse HEAD').rstrip('\n')
+    get_command_output('git reset ' + commit_to_delete + '^ --hard')
+    ordered_commits = get_commits_between(commit_to_delete, prev_head)
+    for cherry_pick_commit in ordered_commits:
+        get_command_output('git cherry-pick ' + cherry_pick_commit)
 
 
 green = '\x1b[0;32m'
@@ -65,41 +65,42 @@ reset = '\x1b[00m'
 red = '\x1b[0;31m'
 
 
-def isClean():
-    status = getCommandOutput('git status --long')
-    ss = re.sub(
-        r'On branch ([^\n])+\nnothing to commit, working tree clean\n', 'abcd', status)
-    return ss == 'abcd'
+def is_clean():
+    status = get_command_output('git status --long')
+    clean_status_pattern = re.compile(
+        r'On branch ([^\n])+\nnothing to commit, working tree clean\n')
+    return clean_status_pattern.match(status)
 
 
-def getLog():
-    commitSeparator = '~*~**~**~**~'
-    detailSeparator = '~*~<>~<>~<>~'
-    gitlog = getCommandOutput('git --no-pager log --reverse --pretty=format:"%h' + detailSeparator +
-                              '%an' + detailSeparator + '%s' + detailSeparator + '%b' + commitSeparator + '" origin/master..HEAD')
-    commits = gitlog.split(commitSeparator)
-    commitCounter = len(commits) - 2
-    for commit in commits:
-        v = commit.split(detailSeparator)
-        if len(v) < 3:
+def print_log():
+    commit_separator = '~*~**~**~**~'
+    detail_separator = '~*~<>~<>~<>~'
+    raw_log = get_command_output('git --no-pager log --reverse --pretty=format:"%h' + detail_separator +
+                                 '%an' + detail_separator + '%s' + detail_separator + '%b' + commit_separator + '" origin/master..HEAD')
+    raw_commits = raw_log.split(commit_separator)
+    commit_head_offset = len(raw_commits) - 2
+    for commit in raw_commits:
+        commit_details = commit.split(detail_separator)
+        if len(commit_details) < 3:
             continue
-        ohash = magenta + v[0].lstrip('\n') + reset
-        fullname = v[1]
-        firstname = red + fullname.split(' ')[0].lstrip(' ') + reset
-        title = v[2].rstrip('\n')
-        fullmessage = v[3]
-        matchObj = re.search(r'\nDifferential Revision: [^\n]+\n', fullmessage)
-        diffUrlLine = ''
-        headOffset = green + str(commitCounter) + reset
-        if commitCounter <= 9:
-            headOffset = ' ' + headOffset
-        commitCounter -= 1
-        if matchObj:
-            diffUrlLine = magenta + \
+        commit_hash = magenta + commit_details[0].lstrip('\n') + reset
+        full_name = commit_details[1]
+        first_name = red + full_name.split(' ')[0].lstrip(' ') + reset
+        commit_title = commit_details[2].rstrip('\n')
+        full_commit_message = commit_details[3]
+        phab_line_match = re.search(
+            r'\nDifferential Revision: [^\n]+\n', full_commit_message)
+        phab_line_url = ''
+        head_offset = green + str(commit_head_offset) + reset
+        if commit_head_offset <= 9:
+            head_offset = ' ' + head_offset
+        commit_head_offset -= 1
+        if phab_line_match:
+            phab_line_url = magenta + \
                 re.sub('\n', '', re.sub(r'\nDifferential Revision: ',
-                                        '', matchObj.group(0))) + reset
+                                        '', phab_line_match.group(0))) + reset
         print(' '.join(
-            filter(None, [headOffset + ' ', ohash, diffUrlLine, firstname, title])))
+            filter(None, [head_offset + ' ', commit_hash, phab_line_url, first_name, commit_title])))
 
 
 def main():
@@ -107,7 +108,7 @@ def main():
     argumentLength = len(sys.argv)
     if (argumentLength < 2):
         # https://docs.python.org/3/library/argparse.html
-        getLog()
+        print_log()
         return
 
     action = sys.argv[1].rstrip('\n')
@@ -115,25 +116,25 @@ def main():
     if action == '-m' and argumentLength > 3:
         rebaseCommit = sys.argv[2].rstrip('\n')
         lastCommit = sys.argv[3].rstrip('\n')
-        firstCommit = getDirectParent(lastCommit)
+        firstCommit = get_direct_parent(lastCommit)
         if argumentLength > 4:
             lastCommit = sys.argv[4].rstrip('\n')
-        moveCommits(rebaseCommit, firstCommit, lastCommit)
+        move_commits(rebaseCommit, firstCommit, lastCommit)
 
     if action == '-d' and argumentLength == 3:
         commitToDelete = sys.argv[2].rstrip('\n')
-        deleteCommit(commitToDelete)
+        delete_commit(commitToDelete)
 
     if action == '-s' and argumentLength == 3:
         commitToSquash = sys.argv[2].rstrip('\n')
-        squashCommit(commitToSquash + '^', commitToSquash)
+        squash_commit(commitToSquash + '^', commitToSquash)
     if action == '-s' and argumentLength == 4:
         start = sys.argv[2].rstrip('\n')
         end = sys.argv[3].rstrip('\n')
-        squashCommit(start, end)
+        squash_commit(start, end)
 
     if action == '--isClean':
-        if isClean():
+        if is_clean():
             print('status is clean')
         else:
             print('status is not clean')

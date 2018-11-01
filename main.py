@@ -31,7 +31,7 @@ def getCommitsBetween(earlier, later):
   return commitList
 
 def getDirectParent(commit):
-  return getCommandOutput('git rev-list ' + commit + ' --max-count=1 --skip=1').rstrip('\n')
+  return getCommandOutput('git rev-parse ' + commit + '^').rstrip('\n')
 
 def moveCommits(commitToFollow, startCommitToMove, endCommitToMove):
   oldHead=getCommandOutput('git rev-parse HEAD').rstrip('\n')

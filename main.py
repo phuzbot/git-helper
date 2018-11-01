@@ -61,10 +61,25 @@ def delete_commit(commit_to_delete):
     cherry_pick_list(ordered_commits)
 
 
-green = '\x1b[0;32m'
-magenta = '\x1b[0;35m'
-reset = '\x1b[00m'
-red = '\x1b[0;31m'
+reset_color = '\x1b[00m'
+
+
+def green(text):
+    if text == '':
+        return ''
+    return '\x1b[0;32m' + text + reset_color
+
+
+def magenta(text):
+    if text == '':
+        return ''
+    return '\x1b[0;35m' + text + reset_color
+
+
+def red(text):
+    if text == '':
+        return ''
+    return '\x1b[0;31m' + text + reset_color
 
 
 def is_clean():
@@ -85,24 +100,23 @@ def print_log():
         commit_details = commit.split(detail_separator)
         if len(commit_details) < 3:
             continue
-        commit_hash = magenta + commit_details[0].lstrip('\n') + reset
+        commit_hash = commit_details[0].lstrip('\n')
         full_name = commit_details[1]
-        first_name = red + full_name.split(' ')[0].lstrip(' ') + reset
+        first_name = full_name.split(' ')[0].lstrip(' ')
         commit_title = commit_details[2].rstrip('\n')
         full_commit_message = commit_details[3]
         phab_line_match = re.search(
             r'\nDifferential Revision: [^\n]+\n', full_commit_message)
         phab_line_url = ''
-        head_offset = green + str(commit_head_offset) + reset
+        head_offset = green(str(commit_head_offset))
         if commit_head_offset <= 9:
             head_offset = ' ' + head_offset
         commit_head_offset -= 1
         if phab_line_match:
-            phab_line_url = magenta + \
-                re.sub('\n', '', re.sub(r'\nDifferential Revision: ',
-                                        '', phab_line_match.group(0))) + reset
+            phab_line_url = re.sub('\n', '', re.sub(
+                r'\nDifferential Revision: ', '', phab_line_match.group(0)))
         print(' '.join(
-            filter(None, [head_offset + ' ', commit_hash, phab_line_url, first_name, commit_title])))
+            filter(None, [head_offset + ' ', magenta(commit_hash), magenta(phab_line_url), red(first_name), commit_title])))
 
 
 def main():

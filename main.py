@@ -44,6 +44,15 @@ def moveCommits(commitToFollow, startCommitToMove, endCommitToMove):
     getCommandOutput('git cherry-pick ' + cherryPickCommit)
   # should check the diff here and then error out if it does not match
 
+def squashCommit(startSquash, endSquash):
+  oldHead=getCommandOutput('git rev-parse HEAD').rstrip('\n')
+  getCommandOutput('git reset ' + endSquash + ' --hard')
+  getCommandOutput('git reset --soft ' + startSquash)
+  getCommandOutput('git commit --amend --no-edit')
+  orderedCommits = getCommitsBetween(endSquash, oldHead)
+  for cherryPickCommit in orderedCommits:
+    getCommandOutput('git cherry-pick ' + cherryPickCommit)
+
 def deleteCommit(commitToDelete):
   oldHead=getCommandOutput('git rev-parse HEAD').rstrip('\n')
   getCommandOutput('git reset ' + commitToDelete + '^ --hard')
@@ -108,6 +117,14 @@ def main():
   if action == '-d' and argumentLength == 3:
     commitToDelete = sys.argv[2].rstrip('\n')
     deleteCommit(commitToDelete)
+
+  if action == '-s' and argumentLength == 3:
+    commitToSquash = sys.argv[2].rstrip('\n')
+    squashCommit(commitToSquash + '^', commitToSquash)
+  if action == '-s' and argumentLength == 4:
+    start = sys.argv[2].rstrip('\n')
+    end = sys.argv[3].rstrip('\n')
+    squashCommit(start, end)
 
   if action == '--isClean':
     if isClean():

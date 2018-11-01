@@ -79,10 +79,12 @@ def squash_commit(start_squash, end_squash):
     """Squashes all the commits between start and end inclusive into start preserving only the
     commit message of start."""
     prev_head = get_head_hash()
-    get_command_output('git reset ' + end_squash + ' --hard')
-    get_command_output('git reset --soft ' + start_squash)
+    start_squash_hash = get_commit_hash(start_squash)
+    end_squash_hash = get_commit_hash(end_squash)
+    get_command_output('git reset ' + end_squash_hash + ' --hard')
+    get_command_output('git reset --soft ' + start_squash_hash)
     get_command_output('git commit --amend --no-edit')
-    ordered_commits = get_commits_between(end_squash, prev_head)
+    ordered_commits = get_commits_between(end_squash_hash, prev_head)
     cherry_pick_list(ordered_commits)
 
 

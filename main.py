@@ -44,6 +44,13 @@ def moveCommits(commitToFollow, startCommitToMove, endCommitToMove):
     getCommandOutput('git cherry-pick ' + cherryPickCommit)
   # should check the diff here and then error out if it does not match
 
+def deleteCommit(commitToDelete):
+  oldHead=getCommandOutput('git rev-parse HEAD').rstrip('\n')
+  getCommandOutput('git reset ' + commitToDelete + '^ --hard')
+  orderedCommits = getCommitsBetween(commitToDelete, oldHead)
+  for cherryPickCommit in orderedCommits:
+    getCommandOutput('git cherry-pick ' + cherryPickCommit)
+
 green = '\x1b[0;32m'
 magenta = '\x1b[0;35m'
 reset = '\x1b[00m'
@@ -97,6 +104,10 @@ def main():
     if argumentLength > 4:
       lastCommit = sys.argv[4].rstrip('\n')
     moveCommits(rebaseCommit, firstCommit, lastCommit)
+
+  if action == '-d' and argumentLength == 3:
+    commitToDelete = sys.argv[2].rstrip('\n')
+    deleteCommit(commitToDelete)
 
   if action == '--isClean':
     if isClean():

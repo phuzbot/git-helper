@@ -9,6 +9,7 @@ import subprocess
 
 
 def get_command_output(command):
+    """Runs a command and returns the output."""
     process = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
     process_output = process.stdout.read()
@@ -17,7 +18,7 @@ def get_command_output(command):
 
 
 def get_commits_between(earlier, later):
-    # excludes earlier commit, includes later commit
+    """Returns a list of commits between earlier exclusive and later inclusive."""
     raw_commit_list = get_command_output(
         'git rev-list --ancestry-path ' + earlier + '..' + later)
     commit_list = raw_commit_list.rstrip('\n').split('\n')
@@ -26,26 +27,45 @@ def get_commits_between(earlier, later):
 
 
 def get_direct_parent(commit):
+    """Returns the direct parent of a given commit."""
     return get_command_output('git rev-parse ' + commit + '^').rstrip('\n')
 
 
 def cherry_pick_list(commits):
+    """Cherry picks a list of commits onto the current head."""
     for commit in commits:
         get_command_output('git cherry-pick ' + commit)
 
 
-def move_commits(root_commit, commits_to_move_down, end_move_commit):
+def move_commits(root_commit, start_move_commit, end_move_commit):
+    """Moves the lit of commits defined by start exclusive to end inclusive to directly after the root.
+
+    Note that this action is also identical to swapping the two blocks of commits from root exclusive
+    to start inclusive with start exclusive to end inclusive.
+    eg. move_commits(g, d, a)
+    h             h
+    g             g
+    f             c
+    e             b
+    d       ->    a
+    c             f
+    b             e
+    a             d
+    HEAD          HEAD
+    """
     commits_to_move_up = get_commits_between(
-        commits_to_move_down, end_move_commit)
-    commitsToMoveDown = get_commits_between(root_commit, commits_to_move_down)
+        start_move_commit, end_move_commit)
+    commits_to_move_down = get_commits_between(root_commit, start_move_commit)
     commits_to_remain = get_commits_between(end_move_commit, 'HEAD')
     get_command_output('git reset ' + root_commit + ' --hard')
-    ordered_commits = commits_to_move_up + commitsToMoveDown + commits_to_remain
+    ordered_commits = commits_to_move_up + commits_to_move_down + commits_to_remain
     cherry_pick_list(ordered_commits)
     # should check the diff here and then error out if it does not match
 
 
 def squash_commit(start_squash, end_squash):
+    """Squashes all the commits between start and end inclusive into start preserving only the
+    commit message of start."""
     prev_head = get_command_output('git rev-parse HEAD').rstrip('\n')
     get_command_output('git reset ' + end_squash + ' --hard')
     get_command_output('git reset --soft ' + start_squash)
@@ -55,6 +75,7 @@ def squash_commit(start_squash, end_squash):
 
 
 def delete_commit(commit_to_delete):
+    """Deletes a commit."""
     prev_head = get_command_output('git rev-parse HEAD').rstrip('\n')
     get_command_output('git reset ' + commit_to_delete + '^ --hard')
     ordered_commits = get_commits_between(commit_to_delete, prev_head)
@@ -65,24 +86,27 @@ reset_color = '\x1b[00m'
 
 
 def green(text):
+    """Makes text green in the console."""
     if text == '':
         return ''
     return '\x1b[0;32m' + text + reset_color
 
 
 def magenta(text):
+    """Makes text magenta in the console."""
     if text == '':
         return ''
     return '\x1b[0;35m' + text + reset_color
 
 
 def red(text):
+    """Makes text red in the console."""
     if text == '':
         return ''
     return '\x1b[0;31m' + text + reset_color
 
 
-def is_clean():
+def _is_clean():
     status = get_command_output('git status --long')
     clean_status_pattern = re.compile(
         r'On branch ([^\n])+\nnothing to commit, working tree clean\n')
@@ -90,6 +114,7 @@ def is_clean():
 
 
 def print_log():
+    """Prints a formatted log output."""
     commit_separator = '~*~**~**~**~'
     detail_separator = '~*~<>~<>~<>~'
     # https://git-scm.com/docs/pretty-formats
@@ -155,7 +180,7 @@ def main():
         squash_commit(start, end)
 
     if action == '--isClean':
-        if is_clean():
+        if _is_clean():
             print('status is clean')
         else:
             print('status is not clean')

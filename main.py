@@ -92,8 +92,13 @@ def is_clean():
 def print_log():
     commit_separator = '~*~**~**~**~'
     detail_separator = '~*~<>~<>~<>~'
-    raw_log = get_command_output('git --no-pager log --reverse --pretty=format:"%h' + detail_separator +
-                                 '%an' + detail_separator + '%s' + detail_separator + '%b' + commit_separator + '" origin/master..HEAD')
+    # https://git-scm.com/docs/pretty-formats
+    abbreviated_commit_hash = '%h'
+    author_name = '%an'
+    subject = '%s'
+    body = '%b'
+    raw_log = get_command_output('git --no-pager log --reverse --pretty=format:"' + abbreviated_commit_hash + detail_separator +
+                                 author_name + detail_separator + subject + detail_separator + body + commit_separator + '" origin/master..HEAD')
     raw_commits = raw_log.split(commit_separator)
     commit_head_offset = len(raw_commits) - 2
     for commit in raw_commits:

@@ -17,6 +17,18 @@ def get_command_output(command):
     return process_output
 
 
+def get_head_hash():
+    """Returns the hash of the current head."""
+    return get_commit_hash('HEAD')
+
+
+def get_commit_hash(commit):
+    """Returns the ref of the commit.
+
+    Used so that relative references do not become incorrect. """
+    return get_command_output('git rev-parse ' + commit).rstrip('\n')
+
+
 def get_commits_between(earlier, later):
     """Returns a list of commits between earlier exclusive and later inclusive."""
     raw_commit_list = get_command_output(
@@ -28,7 +40,7 @@ def get_commits_between(earlier, later):
 
 def get_direct_parent(commit):
     """Returns the direct parent of a given commit."""
-    return get_command_output('git rev-parse ' + commit + '^').rstrip('\n')
+    return get_commit_hash(commit + '^')
 
 
 def cherry_pick_list(commits):
@@ -66,7 +78,7 @@ def move_commits(root_commit, start_move_commit, end_move_commit):
 def squash_commit(start_squash, end_squash):
     """Squashes all the commits between start and end inclusive into start preserving only the
     commit message of start."""
-    prev_head = get_command_output('git rev-parse HEAD').rstrip('\n')
+    prev_head = get_head_hash()
     get_command_output('git reset ' + end_squash + ' --hard')
     get_command_output('git reset --soft ' + start_squash)
     get_command_output('git commit --amend --no-edit')
@@ -76,9 +88,10 @@ def squash_commit(start_squash, end_squash):
 
 def delete_commit(commit_to_delete):
     """Deletes a commit."""
-    prev_head = get_command_output('git rev-parse HEAD').rstrip('\n')
-    get_command_output('git reset ' + commit_to_delete + '^ --hard')
-    ordered_commits = get_commits_between(commit_to_delete, prev_head)
+    commit_to_delete_hash = get_commit_hash(commit_to_delete)
+    prev_head = get_head_hash()
+    get_command_output('git reset ' + commit_to_delete_hash + '^ --hard')
+    ordered_commits = get_commits_between(commit_to_delete_hash, prev_head)
     cherry_pick_list(ordered_commits)
 
 

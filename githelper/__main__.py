@@ -163,34 +163,34 @@ def print_log():
             filter(None, [head_offset + ' ', magenta(commit_hash), magenta(phab_line_url), red(first_name), commit_title])))
 
 
-def main():
+def main(args):
 
-    argumentLength = len(sys.argv)
+    argumentLength = len(args)
     if (argumentLength < 2):
         # https://docs.python.org/3/library/argparse.html
         print_log()
         return
 
-    action = sys.argv[1].rstrip('\n')
+    action = args[1].rstrip('\n')
 
     if action == '-m' and argumentLength > 3:
-        rebaseCommit = sys.argv[2].rstrip('\n')
-        lastCommit = sys.argv[3].rstrip('\n')
+        rebaseCommit = args[2].rstrip('\n')
+        lastCommit = args[3].rstrip('\n')
         firstCommit = get_direct_parent(lastCommit)
         if argumentLength > 4:
-            lastCommit = sys.argv[4].rstrip('\n')
+            lastCommit = args[4].rstrip('\n')
         move_commits(rebaseCommit, firstCommit, lastCommit)
 
     if action == '-d' and argumentLength == 3:
-        commitToDelete = sys.argv[2].rstrip('\n')
+        commitToDelete = args[2].rstrip('\n')
         delete_commit(commitToDelete)
 
     if action == '-s' and argumentLength == 3:
-        commitToSquash = sys.argv[2].rstrip('\n')
+        commitToSquash = args[2].rstrip('\n')
         squash_commit(commitToSquash + '^', commitToSquash)
     if action == '-s' and argumentLength == 4:
-        start = sys.argv[2].rstrip('\n')
-        end = sys.argv[3].rstrip('\n')
+        start = args[2].rstrip('\n')
+        end = args[3].rstrip('\n')
         squash_commit(start, end)
 
     if action == '--isClean':
@@ -204,4 +204,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv)
